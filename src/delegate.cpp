@@ -21,18 +21,18 @@
 #define ATYPE_MOVE 2
 #define ATYPE_ITEM 3
 #define ATYPE_DEITEM 4
-#define ATYPE_NONE 4
+#define ATYPE_NONE 5
 
 #define PROMPT "==> "
 #define TTEXT_RATE 25
 
-#define CLEVER_SKIP "`"
-#define CLEVER_ESCAPE "%"
-#define CLEVER_PROMPT ">"
-#define CLEVER_CLEAR "~"
-#define CLEVER_LAST "|"
-#define CLEVER_INSTANT "!"
-#define CLEVER_TELETYPE "@"
+#define CLEVER_SKIP '`'
+#define CLEVER_ESCAPE '%'
+#define CLEVER_PROMPT '>'
+#define CLEVER_CLEAR '~'
+#define CLEVER_LAST '|'
+#define CLEVER_INSTANT '!'
+#define CLEVER_TELETYPE '@'
 
 //Condition for option
 //either use of display
@@ -53,7 +53,7 @@ typedef struct ActionT{
 
 //A selectable option in a room
 typedef struct{
-	int id;
+	std::string id;
 	std::string text;
 
 	//can it be used
@@ -96,6 +96,7 @@ typedef struct{
 
 Item NullItem = {"", "Not everything exists.", 0};
 Room NullRoom = {"", "Not everywhere exists.", NULL, 0};
+Option NullOption = {"", "Some things aren't a choice."};
 
 //contains all game data
 typedef struct{
@@ -182,9 +183,81 @@ void qttexp(std::string text, std::string person){
 	ttextp("\""+text+"\"");
 }
 
+void clevertextflush(std::string buffer, bool prompt, bool clr, bool teletype){
+	if(teletype){
+		ttext(buffer);
+	}else{
+		itext(buffer);
+	}
+
+	if(prompt){
+		wait();
+	}
+
+	if(clr){
+		clear();
+	}
+}
+
 //print text the smart way
 void clevertext(std::string text,bool used){
-	//fuck this shit todo
+	//why did I decide this was necessary?
+	bool escaped = false;
+	bool waiting = used;
+	std::string buffer = "";
+	bool skip = text[0]==CLEVER_SKIP;//todo
+	bool teletype = true;
+
+	for(int i = 0 ; i<text.length() ; i++){
+		if(escaped){
+			buffer += text[i];
+			escaped = false;
+			continue;
+		}
+
+		if(waiting){
+			if(text[i]==CLEVER_LAST){
+				waiting = false;
+				buffer = "";
+			}
+			continue;
+		}
+
+		switch(text[i]){
+			case CLEVER_ESCAPE:
+				escaped = true;
+				break;
+
+			//these are implemented above
+			case CLEVER_LAST:
+				break;
+			case CLEVER_SKIP:
+				break;
+
+			//these require flushing the buffer
+			case CLEVER_PROMPT:
+				clevertextflush(buffer, true,false,teletype);
+				buffer = "";
+				break;
+			case CLEVER_CLEAR:
+				clevertextflush(buffer, true,true,teletype);
+				buffer = "";
+				break;
+			case CLEVER_INSTANT:
+				clevertextflush(buffer, false,false,teletype);
+				buffer = ""; teletype = false;
+				break;
+			case CLEVER_TELETYPE:
+				clevertextflush(buffer, false,false,teletype);
+				buffer = ""; teletype = true;
+				break;
+			default:
+				buffer+=text[i];
+				break;
+		}
+
+	}
+	if(waiting) clevertext(text,false);
 }
 
 //print errors for debugging
@@ -226,7 +299,7 @@ Option* getoption(std::string r, std::string s){
 	}
 
 	error("some opportunities are missed no matter where you are.");
-	return &NullItem;
+	return &NullOption;
 }
 
 //check if player has item in inventory
@@ -359,18 +432,19 @@ int loop(bool fast){
 				playergive(action.detail,-1);
 				break;
 			case ATYPE_ENABLE:
-				std::string roomcode = action.detail.substr(0, action.detail.find(":"));
-				std::string optcode = action.detail.substr(action.detail.find(":") + 1);
-				getoption(roomcode,optcode)->enabled = true;
+				getoption(action.detail.substr(0, action.detail.find(":")),
+					action.detail.substr(action.detail.find(":") + 1)
+				)->enabled = true;
 				break;
 			case ATYPE_DISABLE:
-				std::string roomcode = action.detail.substr(0, action.detail.find(":"));
-				std::string optcode = action.detail.substr(action.detail.find(":") + 1);
-				getoption(roomcode,optcode)->enabled = false;
+				getoption(action.detail.substr(0, action.detail.find(":")),
+					action.detail.substr(action.detail.find(":") + 1)
+				)->enabled = false;
 				break;
 			case ATYPE_MOVE:
 				setroom(action.detail);
 				break;
+
 			default:
 				error("I can only do what I have been taught to do.");
 				break;
@@ -400,6 +474,8 @@ int loop(bool fast){
 }
 
 int main(){
+	clevertext("Hello>My name is Toby>Whats you name?~...~Hmm?> You cant speak?> I will name you then, let me think...~!.~..~...~@I will call you: !shadow girl%!\n",0);
+
 	data = loadAllData();
 
 	bool fast = false;
@@ -412,3 +488,4 @@ Config loadAllData(){
 	//todo
 	return stuff;
 }
+
