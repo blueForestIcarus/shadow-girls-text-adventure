@@ -9,6 +9,7 @@
 //timing for teletype effect
 #include <chrono>
 #include <thread>
+#include <cstdlib>
 
 /*These codes identify different types of
  * conditionals and actions for rooms in
@@ -24,7 +25,7 @@
 #define ATYPE_NONE 5
 
 #define PROMPT "==> "
-#define TTEXT_RATE 25
+#define TTEXT_RATE 20
 
 #define CLEVER_SKIP '`'
 #define CLEVER_ESCAPE '%'
@@ -33,6 +34,7 @@
 #define CLEVER_LAST '|'
 #define CLEVER_INSTANT '!'
 #define CLEVER_TELETYPE '@'
+//todo line by line teletype
 
 //Condition for option
 //either use of display
@@ -112,7 +114,7 @@ typedef struct{
 Config data;
 
 //called by main setup game
-Config loadAllData();
+void loadAllData();
 
 //ascii art of a heart for the end
 std::string ascii_heart = " ________________ \n|      _  _      |\n|   \\ ( \\/ ) /   |\n|  --  \\  ";
@@ -124,22 +126,20 @@ int num_error_messages = 7;
 
 //print instantly
 void itext(std::string text){
-	std::cout << text;
+	std::cout << text  << std::flush;
 }
 
 //wait <ms> milliseconds
-void pause(int ms){
+void pause(int ms){//todo test this
 	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-#include <cstdlib>
-
 //clear the console window, found on stackoverflow
 //https://stackoverflow.com/questions/228617/how-do-i-clear-the-console-in-both-windows-and-linux-using-c
-void clear(){
+void clear(){//todo test
 #ifdef WINDOWS
 	//this is windows
-    std::system("cls");
+	std::system("cls");
 #else
     //this is mac/linux
     std::system("clear");
@@ -163,16 +163,14 @@ void wait(){
 
 //print text all cool like
 void ttext(std::string text){
-	int i = 0;
-	while(text[i]!= '\0'){
-		std::cout << text[i];
+	for(int i=0 ; i< (signed)text.length() ; i++){
+		std::cout << text[i] << std::flush;
 		pause(TTEXT_RATE);
 	}
 }
 
 //print text then pause
 void ttextp(std::string text){
-	//print text
 	ttext(text);
 	wait();
 }
@@ -208,7 +206,7 @@ void clevertext(std::string text,bool used){
 	bool skip = text[0]==CLEVER_SKIP;//todo
 	bool teletype = true;
 
-	for(int i = 0 ; i<text.length() ; i++){
+	for(int i = 0 ; i < (signed) text.length() ; i++){
 		if(escaped){
 			buffer += text[i];
 			escaped = false;
@@ -257,7 +255,11 @@ void clevertext(std::string text,bool used){
 		}
 
 	}
-	if(waiting) clevertext(text,false);
+	if(waiting){
+		clevertext(text,false);
+	}else{
+		clevertextflush(buffer,false, false,teletype);
+	}
 }
 
 //print errors for debugging
@@ -310,6 +312,12 @@ bool playerhas(std::string s){
 //give item to player
 int playergive(std::string s, int a){
 	getitem(s)->quantity += a;
+	return getitem(s)->quantity;
+}
+
+//take item from player
+int playertakeall(std::string s){
+	getitem(s)->quantity = 0;
 	return getitem(s)->quantity;
 }
 
@@ -390,8 +398,10 @@ int loop(bool fast){
 	}
 	Option* choosen = &(current->options[select]);
 
-	//print option text
-	clevertext(choosen->text, choosen->failed + choosen->used);
+	//print option text (this is no longer applicable)
+	//clevertext(choosen->text, choosen->failed + choosen->used);
+
+	clear();
 
 	//check condition
 	bool pass;
@@ -429,7 +439,7 @@ int loop(bool fast){
 				playergive(action.detail,1);
 				break;
 			case ATYPE_DEITEM:
-				playergive(action.detail,-1);
+				playertakeall(action.detail);
 				break;
 			case ATYPE_ENABLE:
 				getoption(action.detail.substr(0, action.detail.find(":")),
@@ -466,6 +476,7 @@ int loop(bool fast){
 
 	//give user time to read
 	wait();
+	clear();
 
 	//check for endgame
 	gameover();
@@ -474,18 +485,176 @@ int loop(bool fast){
 }
 
 int main(){
-	clevertext("Hello>My name is Toby>Whats you name?~...~Hmm?> You cant speak?> I will name you then, let me think...~!.~..~...~@I will call you: !shadow girl%!\n",0);
+	clear();
+	ttext("Loading Data\n");
+	ttext("...");
 
-	data = loadAllData();
+	//load the game data
+	loadAllData();
 
+	itext("\n\n[Done]");
+	pause(500);
+	clear();
+
+	//start game loop
 	bool fast = false;
 	while(true){fast = loop(fast);}
 	return 0;
 }
 
-Config loadAllData(){
-	Config stuff;
-	//todo
-	return stuff;
+//tracks data loader progress
+struct Loader{
+	int item_i;
+	int room_i;
+	int option_i;
+} loader = {-1,-1,-1};
+
+//these functions facilitate population "data" with game data
+void newitem(std::string id, std::string text){
+	Item a = {id,text,0};
+	if(loader.item_i + 1 >= data.num_items){
+		std::cout << "LOADER ERROR: no more space in item array\n";
+		exit(EXIT_FAILURE);
+	}
+	data.items[++loader.item_i] = a;
+}
+
+void newroom(std::string id, int num_options){
+	Room a = {id,"", (Option*) malloc(sizeof(Option)*num_options), num_options, 0};
+	if(loader.room_i + 1 >= data.num_rooms){
+		std::cout << "LOADER ERROR: no more space in room array\n";
+		exit(EXIT_FAILURE);
+	}
+
+	data.rooms[++loader.room_i] = a;
+	loader.option_i = -1;
+}
+
+void addtext(std::string s){
+	if(loader.option_i == -1){
+		data.rooms[loader.room_i].text += s;
+	}else{
+		data.rooms[loader.room_i].options[loader.option_i].text += s;
+	}
+}
+
+void addoption(std::string id, bool enabled = true, bool single_use = false){
+	Option a;
+	a.id = id;
+	a.text = "";
+	a.passText = "";
+	a.failText = "";
+	a.used =0;
+	a.failed = 0;
+	a.enabled = enabled;
+	a.disable_on_use = single_use;
+	a.action = {ATYPE_NONE,"",NULL,false};
+	a.condition = {CTYPE_NONE,""};
+	a.displaytest = {CTYPE_NONE,""};
+
+	if(loader.option_i + 1 >= data.rooms[loader.room_i].num_options){
+		std::cout << "LOADER ERROR: no more space in option array [" + data.rooms[loader.room_i].id + "]\n";
+		exit(EXIT_FAILURE);
+	}
+	data.rooms[loader.room_i].options[++loader.option_i] = a;
+}
+
+void require(std::string item){
+    data.rooms[loader.room_i].options[loader.option_i].condition = {CTYPE_ITEM,item};
+}
+
+void passtext(std::string s){
+	data.rooms[loader.room_i].options[loader.option_i].passText += s;
+}
+
+void failtext(std::string s){
+	data.rooms[loader.room_i].options[loader.option_i].failText += s;
+}
+
+void disable(){
+	data.rooms[loader.room_i].options[loader.option_i].enabled = false;
+}
+
+void single_use(){
+	data.rooms[loader.room_i].options[loader.option_i].disable_on_use = true;
+}
+
+
+void action(int type, std::string detail){
+	Action* b = (Action*) malloc(sizeof(Action));
+	*b = {type,detail,NULL,false};
+
+	Action* a = &(data.rooms[loader.room_i].options[loader.option_i].action);
+	while(a->nextexists){
+		a = a->next;
+	}
+
+	a->nextexists=true;
+	a->next = b;
+}
+
+void copyoption(std::string id, std::string text=""){
+	Option a = data.rooms[loader.room_i].options[loader.option_i];
+	a.id = id; a.text = text;
+	if(loader.option_i + 1 >= data.rooms[loader.room_i].num_options){
+		std::cout << "LOADER ERROR: no more space in option array [" + data.rooms[loader.room_i].id + "]\n";
+		exit(EXIT_FAILURE);
+	}
+	data.rooms[loader.room_i].options[++loader.option_i] = a;
+}
+
+//load game config into global variable data
+void loadAllData(){
+	//items
+	#define ITEMCOUNT 7
+	data.num_items = ITEMCOUNT;
+	data.items = (Item*) malloc(sizeof(Item) *ITEMCOUNT);
+
+	newitem("HF1", "a heart fragment");
+	newitem("HF2", "a heart fragment");
+	newitem("HF3", "a heart fragment");
+	newitem("HF4", "a heart fragment");
+	newitem("HF5", "a heart fragment");
+	newitem("K1", "a rusty key");
+	newitem("K1", "a clean key");
+
+	//rooms
+	/*
+	newroom("",3);
+	addtext("");
+
+	addoption("1");
+	addtext("");
+	passtext("");
+	action(ATYPE_MOVE, "");
+
+	copyoption("2", "");
+	copyoption("3", "");
+	*/
+	#define ROOMCOUNT 2
+	data.num_rooms = ROOMCOUNT;
+	data.rooms = (Room*) malloc(ROOMCOUNT*sizeof(Room));
+
+	newroom("GMentry0",3);
+	addtext("[Press Enter To Progress]~Hello>My name is Toby>Whats you name?");
+
+	addoption("1");
+	addtext("Itysbitta");
+	passtext("!You Cannot Remember Your Name.");
+	passtext("@~...~Hmm?>You cant speak?>I will name you then, let me think...~!.~..~...~@I know>I will call you: !shadow girl%!");
+	action(ATYPE_MOVE, "LOCmainroom");
+
+	copyoption("2", "Caxpwroana");
+	copyoption("3", "Menalafani");
+
+	newroom("LOCmainroom",1);
+	addtext("You get a funny feeling.>Your vision goes white.>Whats going on?~...~|You materialise in the living room.");
+
+	addoption("1");
+	addtext("Do Nothing");
+	passtext("!You did nothing. You lazy fuck.");
+
+	//set entry point
+	data.current = "GMentry0";
 }
 
