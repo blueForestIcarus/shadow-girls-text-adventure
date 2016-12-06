@@ -424,7 +424,7 @@ int loop(bool fast){
 		clevertext(choosen->passText,choosen->used);
 	}else{
 		clevertext(choosen->failText,choosen->failed);
-		choosen->failed++;
+		(choosen->failed)++;
 		wait();
 		return true;
 	}
@@ -467,7 +467,7 @@ int loop(bool fast){
 		break;
 	}
 
-	choosen->used++;
+	(choosen->used)++;
 
 	//check to make sure everything is okay
 	if(getroom(data.current)->options[select].used == 0){
@@ -516,17 +516,18 @@ void newitem(std::string id, std::string text){
 		std::cout << "LOADER ERROR: no more space in item array\n";
 		exit(EXIT_FAILURE);
 	}
-	data.items[++loader.item_i] = a;
+	data.items[++(loader.item_i)] = a;
 }
 
 void newroom(std::string id, int num_options){
-	Room a = {id,"", (Option*) malloc(sizeof(Option)*num_options), num_options, 0};
+	Option* options = (Option*) malloc(sizeof(Option)*num_options);
+	Room a = {id,"", NULL, num_options, 0};
 	if(loader.room_i + 1 >= data.num_rooms){
 		std::cout << "LOADER ERROR: no more space in room array\n";
 		exit(EXIT_FAILURE);
 	}
 
-	data.rooms[++loader.room_i] = a;
+	data.rooms[++(loader.room_i)] = a;
 	loader.option_i = -1;
 }
 
@@ -556,7 +557,7 @@ void addoption(std::string id, bool enabled = true, bool single_use = false){
 		std::cout << "LOADER ERROR: no more space in option array [" + data.rooms[loader.room_i].id + "]\n";
 		exit(EXIT_FAILURE);
 	}
-	data.rooms[loader.room_i].options[++loader.option_i] = a;
+	data.rooms[loader.room_i].options[++(loader.option_i)] = a;
 }
 
 void require(std::string item){
@@ -600,7 +601,7 @@ void copyoption(std::string id, std::string text=""){
 		std::cout << "LOADER ERROR: no more space in option array [" + data.rooms[loader.room_i].id + "]\n";
 		exit(EXIT_FAILURE);
 	}
-	data.rooms[loader.room_i].options[++loader.option_i] = a;
+	data.rooms[loader.room_i].options[++(loader.option_i)] = a;
 }
 
 //load game config into global variable data
@@ -633,7 +634,7 @@ void loadAllData(){
 	*/
 	#define ROOMCOUNT 2
 	data.num_rooms = ROOMCOUNT;
-	data.rooms = (Room*) malloc(ROOMCOUNT*sizeof(Room));
+	data.rooms = (Room*) malloc(sizeof(Room)*ROOMCOUNT);
 
 	newroom("GMentry0",3);
 	addtext("[Press Enter To Progress]~Hello>My name is Toby>Whats you name?");
