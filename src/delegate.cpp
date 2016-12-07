@@ -96,9 +96,9 @@ typedef struct{
 	int quantity;
 } Item;
 
-Item NullItem = {"", "Not everything exists.", 0};
-Room NullRoom = {"", "Not everywhere exists.", NULL, 0};
-Option NullOption = {"", "Some things aren't a choice."};
+Item NullItem = {" ", "Not everything exists.", 0};
+Room NullRoom = {" ", "Not everywhere exists.", NULL, 0};
+Option NullOption = {" ", "Some things aren't a choice."};
 
 //contains all game data
 typedef struct{
@@ -264,7 +264,7 @@ void clevertext(std::string text,bool used){
 
 //print errors for debugging
 void error(std::string s){
-	ttext("Dear Programmer: " + s + "\n");
+	ttext("\nDear Programmer: " + s + "\n");
 }
 
 Room* getroom(std::string s){
@@ -323,7 +323,7 @@ int playertakeall(std::string s){
 
 //set current room
 bool setroom(std::string s){
-	if(getroom(s)->id == ""){
+	if(getroom(s)->id != " "){
 		data.current = s;
 		return true;
 	}
@@ -362,7 +362,8 @@ void gameover(){
 
 int loop(bool fast){
 	//display room text.
-	Room* current = getroom(data.current);
+	std::string roomid = data.current;
+	Room* current = getroom(roomid);
 	if(fast){
 		clevertext(CLEVER_SKIP+current->text,current->passes>0);
 	}else{
@@ -372,16 +373,17 @@ int loop(bool fast){
 	//display options.
 	int options[100];
 	int num_options=0;
-
+	std::cout<<std::endl;
 	for(int i = 0 ; i < current->num_options ; i++){
 		bool spent = current->options[i].used > 0 && current->options[i].disable_on_use;
 		if(current->options[i].enabled && !spent){//todo display condition
-			itext(std::to_string(num_options+1) + current->options[i].text + endl);
-			pause(TTEXT_RATE*2);
+			itext(" " + std::to_string(num_options+1) + " " +  current->options[i].text + endl);
+			pause(TTEXT_RATE*4);
 			options[num_options]=i;
 			num_options++;
 		}
 	}
+	(current->passes)++;
 
 	//get choice.
 	int select = 0;
@@ -470,7 +472,7 @@ int loop(bool fast){
 	(choosen->used)++;
 
 	//check to make sure everything is okay
-	if(getroom(data.current)->options[select].used == 0){
+	if(getroom(roomid)->options[select].used == 0){
 		error("assignment ineffective... welcome to pointer hell.");
 	}
 
@@ -507,57 +509,75 @@ struct Loader{
 	int item_i;
 	int room_i;
 	int option_i;
-} loader = {-1,-1,-1};
+} loader;
 
 //these functions facilitate population "data" with game data
 void newitem(std::string id, std::string text){
-	Item a = {id,text,0};
 	if(loader.item_i + 1 >= data.num_items){
 		std::cout << "LOADER ERROR: no more space in item array\n";
 		exit(EXIT_FAILURE);
 	}
-	data.items[++(loader.item_i)] = a;
+
+	loader.item_i++;
+	data.items[loader.item_i].id = id;
+	data.items[loader.item_i].text = text;
+	data.items[loader.item_i].quantity = 0;
 }
 
 void newroom(std::string id, int num_options){
-	Option* options = (Option*) malloc(sizeof(Option)*num_options);
-	Room a = {id,"", NULL, num_options, 0};
 	if(loader.room_i + 1 >= data.num_rooms){
 		std::cout << "LOADER ERROR: no more space in room array\n";
 		exit(EXIT_FAILURE);
 	}
+	Option* options = (Option*) malloc(sizeof(Option)*num_options);
 
-	data.rooms[++(loader.room_i)] = a;
+	loader.room_i++;
+	data.rooms[loader.room_i].id = id;
+	data.rooms[loader.room_i].options = options;
+	data.rooms[loader.room_i].num_options = num_options;
+	data.rooms[loader.room_i].text = " ";
+	data.rooms[loader.room_i].passes = 0;
+
 	loader.option_i = -1;
 }
 
 void addtext(std::string s){
 	if(loader.option_i == -1){
-		data.rooms[loader.room_i].text += s;
+		if(data.rooms[loader.room_i].text != " "){
+			data.rooms[loader.room_i].text += s;
+		}else{
+			data.rooms[loader.room_i].text = s;
+		}
 	}else{
-		data.rooms[loader.room_i].options[loader.option_i].text += s;
+		if(data.rooms[loader.room_i].options[loader.option_i].text != " "){
+			data.rooms[loader.room_i].options[loader.option_i].text += s;
+		}else{
+			data.rooms[loader.room_i].options[loader.option_i].text = s;
+		}
 	}
 }
 
 void addoption(std::string id, bool enabled = true, bool single_use = false){
 	Option a;
 	a.id = id;
-	a.text = "";
-	a.passText = "";
-	a.failText = "";
+	a.text = " ";
+	a.passText = " ";
+	a.failText = " ";
 	a.used =0;
 	a.failed = 0;
 	a.enabled = enabled;
 	a.disable_on_use = single_use;
-	a.action = {ATYPE_NONE,"",NULL,false};
-	a.condition = {CTYPE_NONE,""};
-	a.displaytest = {CTYPE_NONE,""};
+	a.action = {ATYPE_NONE," ",NULL,false};
+	a.condition = {CTYPE_NONE," "};
+	a.displaytest = {CTYPE_NONE," "};
 
 	if(loader.option_i + 1 >= data.rooms[loader.room_i].num_options){
 		std::cout << "LOADER ERROR: no more space in option array [" + data.rooms[loader.room_i].id + "]\n";
 		exit(EXIT_FAILURE);
 	}
-	data.rooms[loader.room_i].options[++(loader.option_i)] = a;
+
+	++(loader.option_i);
+	data.rooms[loader.room_i].options[loader.option_i] = a;
 }
 
 void require(std::string item){
@@ -565,11 +585,19 @@ void require(std::string item){
 }
 
 void passtext(std::string s){
-	data.rooms[loader.room_i].options[loader.option_i].passText += s;
+	if(	data.rooms[loader.room_i].options[loader.option_i].passText != " "){
+		data.rooms[loader.room_i].options[loader.option_i].passText += s;
+	}else{
+		data.rooms[loader.room_i].options[loader.option_i].passText = s;
+	}
 }
 
 void failtext(std::string s){
-	data.rooms[loader.room_i].options[loader.option_i].failText += s;
+	if(	data.rooms[loader.room_i].options[loader.option_i].failText != " "){
+		data.rooms[loader.room_i].options[loader.option_i].failText += s;
+	}else{
+		data.rooms[loader.room_i].options[loader.option_i].failText = s;
+	}
 }
 
 void disable(){
@@ -582,19 +610,22 @@ void single_use(){
 
 
 void action(int type, std::string detail){
-	Action* b = (Action*) malloc(sizeof(Action));
-	*b = {type,detail,NULL,false};
-
 	Action* a = &(data.rooms[loader.room_i].options[loader.option_i].action);
+
 	while(a->nextexists){
 		a = a->next;
 	}
 
 	a->nextexists=true;
-	a->next = b;
+
+	a->next = (Action*) malloc(sizeof(Action));
+	a->next->type = type;
+	a->next->detail = detail;
+	a->next->next = NULL;
+	a->next->nextexists = false;
 }
 
-void copyoption(std::string id, std::string text=""){
+void copyoption(std::string id, std::string text=" "){
 	Option a = data.rooms[loader.room_i].options[loader.option_i];
 	a.id = id; a.text = text;
 	if(loader.option_i + 1 >= data.rooms[loader.room_i].num_options){
@@ -606,6 +637,8 @@ void copyoption(std::string id, std::string text=""){
 
 //load game config into global variable data
 void loadAllData(){
+	loader={-1,-1,-1};
+
 	//items
 	#define ITEMCOUNT 7
 	data.num_items = ITEMCOUNT;
@@ -617,8 +650,7 @@ void loadAllData(){
 	newitem("HF4", "a heart fragment");
 	newitem("HF5", "a heart fragment");
 	newitem("K1", "a rusty key");
-	newitem("K1", "a clean key");
-
+	newitem("K2", "a clean key");
 	//rooms
 	/*
 	newroom("",3);
@@ -637,23 +669,32 @@ void loadAllData(){
 	data.rooms = (Room*) malloc(sizeof(Room)*ROOMCOUNT);
 
 	newroom("GMentry0",3);
-	addtext("[Press Enter To Progress]~Hello>My name is Toby>Whats you name?");
-
+	addtext("[Press Enter To Progress]~You get a funny feeling.>Something isn't right.~...~You come to a realization.>Where is your body??~[CONTINUE]~|You materialize in the living room.");
 	addoption("1");
-	addtext("Itysbitta");
-	passtext("!You Cannot Remember Your Name.");
-	passtext("@~...~Hmm?>You cant speak?>I will name you then, let me think...~!.~..~...~@I know>I will call you: !shadow girl%!");
-	action(ATYPE_MOVE, "LOCmainroom");
+		addtext("Talk to the child.");
+		passtext("@Child: Hey Ghost Person%!~!You approach the child.~");
+		action(ATYPE_MOVE, "LOCmainroom");
+		disable();
 
-	copyoption("2", "Caxpwroana");
-	copyoption("3", "Menalafani");
+		addoption("2");
+		addtext("Try to remember.");
+		passtext("Last you remember you were climbing a tree.~|You have to find your body...>soon.");
 
-	newroom("LOCmainroom",1);
-	addtext("You get a funny feeling.>Your vision goes white.>Whats going on?~...~|You materialise in the living room.");
+		addoption("3");
+		addtext("Look around.");
+		passtext("It's a fairly normal living room.>It kind of reminds you of yours.~The furniture is quite differn't though.>|Come to think of it there are a lot of strange things in this room.~!You notice a kid in the corner.");
+		action(ATYPE_ENABLE, "GMentry0 1");
 
-	addoption("1");
-	addtext("Do Nothing");
-	passtext("!You did nothing. You lazy fuck.");
+	newroom("LOCmainroom",3);
+	addtext("Child: Hey>Child: You're not a ghost.>Child: (Just another dumb shadow)>Child: I never find any ghosts.\nThis place is supposed to be haunted\nbut it always turns out to be shadows.~Child: You seem confused>Child: Sorry, I didn't mean to be rude/nMy Name is Toby.>|Child: What's your name.");
+		addoption("1");
+		addtext("Itysbitta");
+		passtext("fasdfgkjabfdgmdasfjhg~");
+		passtext("@...~Toby: Hmm?>Toby: You cant speak?>Toby: I'll just call you shadowgirl for now.");
+		action(ATYPE_MOVE, "LOCmainroom");
+
+		copyoption("2", "Caxpwroana");
+		copyoption("3", "Menalafani");
 
 	//set entry point
 	data.current = "GMentry0";
