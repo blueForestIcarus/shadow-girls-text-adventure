@@ -1,7 +1,25 @@
 //Author: Erich Spaker
 //Class: ECE 114
 //Project: final game project
-//Game Name: Shadow Girl
+//Game Name: Shadow Girl's Text Adventure
+//Description: This is a text based adventure game.
+//	Press enter to progress
+//	Enter number to select option
+//	Most of my time went toward the engine
+//	So the story is fairly short. Sorry.
+//	The demo story shows the engines main features:
+//	dialog, options, rooms, and items
+// 	The code is devided into three parts.
+//	DATA: the structures at the top of the file define how data for the game is stored
+//		rooms have header text and options to choose from
+//		options have conditions, text to print after passing or failing that condition
+//			and actions to perform if they pass the condition
+//		actions can be changing rooms, giving items, or enabling/disabling options
+//		the only implemented condition is an item requirement.
+//	ENGINE: Below the structs is the engine code which interprits and manipulates the game data structs
+//		in order to put text on the screen. This code consists of helper functions and the function loop
+//	LOADER: These functions come after main and facilitate populating the game data structs with actual game data
+//		The last function uses these helper functions to create the game.
 #include <iostream>
 #include <string>
 #include <stdlib.h>
@@ -117,7 +135,7 @@ Config data;
 void loadAllData();
 
 //ascii art of a heart for the end
-std::string ascii_heart = " ________________ \n|      _  _      |\n|   \\ ( \\/ ) /   |\n|  --  \\  ";
+std::string ascii_heart = " ________________ \n|      _  _      |\n|   \\ ( \\/ ) /   |\n|  --  \\  \n";
 std::string endl = "\n";
 
 //fun error messages if you enter something incorrectly
@@ -144,6 +162,10 @@ void clear(){//todo test
     //this is mac/linux
     std::system("clear");
 #endif
+}
+
+void flushcin(){
+	std::cin.sync();
 }
 
 //get input
@@ -334,10 +356,10 @@ bool setroom(std::string s){
 //check if player has all heart fragments
 void gameover(){
 	if(playerhas("HF1") &&
-		playerhas("HF1") &&
-		playerhas("HF1") &&
-		playerhas("HF1") &&
-		playerhas("HF1")
+		playerhas("HF2") &&
+		playerhas("HF3") &&
+		playerhas("HF4") &&
+		playerhas("HF5")
 	){
 		ttextp("Congratulations.");
 		ttextp("You found all the heart fragments.");
@@ -356,6 +378,7 @@ void gameover(){
 		ttextp("I know you will do something great with it.");
 		ttext("Goodbye shadow girl.\n");
 		pause(4000);
+		flushcin();
 		while(true) ttextp("CLOSE TERMINAL TO EXIT");
 	}
 }
@@ -388,6 +411,7 @@ int loop(bool fast){
 	//get choice.
 	int select = 0;
 	while(true){
+		flushcin();
 		std::string input = prompt();
 		try{
 			select = std::stoi(input)-1;
@@ -529,7 +553,7 @@ void newroom(std::string id, int num_options){
 		std::cout << "LOADER ERROR: no more space in room array\n";
 		exit(EXIT_FAILURE);
 	}
-	Option* options = (Option*) malloc(sizeof(Option)*num_options);
+	Option* options = new Option[num_options];
 
 	loader.room_i++;
 	data.rooms[loader.room_i].id = id;
@@ -618,7 +642,7 @@ void action(int type, std::string detail){
 
 	a->nextexists=true;
 
-	a->next = (Action*) malloc(sizeof(Action));
+	a->next = new Action;
 	a->next->type = type;
 	a->next->detail = detail;
 	a->next->next = NULL;
@@ -642,7 +666,7 @@ void loadAllData(){
 	//items
 	#define ITEMCOUNT 7
 	data.num_items = ITEMCOUNT;
-	data.items = (Item*) malloc(sizeof(Item) *ITEMCOUNT);
+	data.items = new Item[ITEMCOUNT];
 
 	newitem("HF1", "a heart fragment");
 	newitem("HF2", "a heart fragment");
@@ -664,16 +688,16 @@ void loadAllData(){
 	copyoption("2", "");
 	copyoption("3", "");
 	*/
-	#define ROOMCOUNT 2
+	#define ROOMCOUNT 5
 	data.num_rooms = ROOMCOUNT;
-	data.rooms = (Room*) malloc(sizeof(Room)*ROOMCOUNT);
+	data.rooms = new Room[ROOMCOUNT];
 
 	newroom("GMentry0",3);
 	addtext("[Press Enter To Progress]~You get a funny feeling.>Something isn't right.~...~You come to a realization.>Where is your body??~[CONTINUE]~|You materialize in the living room.");
 	addoption("1");
 		addtext("Talk to the child.");
-		passtext("@Child: Hey Ghost Person%!~!You approach the child.~");
-		action(ATYPE_MOVE, "LOCmainroom");
+		passtext("@Child: Hey Ghost Person...~!You approach the child.");
+		action(ATYPE_MOVE, "GMentry1");
 		disable();
 
 		addoption("2");
@@ -683,18 +707,77 @@ void loadAllData(){
 		addoption("3");
 		addtext("Look around.");
 		passtext("It's a fairly normal living room.>It kind of reminds you of yours.~The furniture is quite differn't though.>|Come to think of it there are a lot of strange things in this room.~!You notice a kid in the corner.");
-		action(ATYPE_ENABLE, "GMentry0 1");
+		action(ATYPE_ENABLE, "GMentry0:1");
 
-	newroom("LOCmainroom",3);
-	addtext("Child: Hey>Child: You're not a ghost.>Child: (Just another dumb shadow)>Child: I never find any ghosts.\nThis place is supposed to be haunted\nbut it always turns out to be shadows.~Child: You seem confused>Child: Sorry, I didn't mean to be rude/nMy Name is Toby.>|Child: What's your name.");
+	newroom("GMentry1",3);
+	addtext("Child: Hey>Child: You're not a ghost.>Child: (Just another dumb shadow)>Child: I never find any ghosts.\nThis place is supposed to be haunted\nbut it always turns out to be shadows.~Child: You seem confused>Child: Sorry, I didn't mean to be rude\nMy Name is Toby.>|Child: What's your name.");
 		addoption("1");
 		addtext("Itysbitta");
-		passtext("fasdfgkjabfdgmdasfjhg~");
+		passtext("You: fasdfgkjabfdgmdasfjhg~");
 		passtext("@...~Toby: Hmm?>Toby: You cant speak?>Toby: I'll just call you shadowgirl for now.");
 		action(ATYPE_MOVE, "LOCmainroom");
 
 		copyoption("2", "Caxpwroana");
 		copyoption("3", "Menalafani");
+
+	newroom("LOCmainroom",3);
+	addtext("You are in the living room.");
+		addoption("1");
+		addtext("Enter the basement.");
+		passtext("The light of you heart casts your shadow.>|You descend into the darkness.>Toby follows.");
+		failtext("A shadow cannot exist without light>|It's too dark to progress.");
+		action(ATYPE_MOVE,"LOCbasement");
+		require("HF1");
+
+		addoption("2");
+		addtext("Go to the kitchen.");
+		passtext("[Continue]");
+		action(ATYPE_MOVE, "LOCkitchen");
+
+		addoption("3");
+		addtext("Talk to Toby.");
+		passtext("Toby: The basement is dark and scary.>Toby: I'm afraid to go down there.>Toby: I BET THERES A GHOST DOWN THERE TOO%!%!%!>You: %<nod%>>|Toby: If only we had a light.");
+
+	newroom("LOCkitchen",4);
+	addtext("The kitchen is a mess.>Its unlikely anyone has lived here in a long time.>There is a black cat looking at you curiously.>There is something shiny on top of the cabinets~[Continue]~|You are in the kitchen.");
+		addoption("1");
+		addtext("Reach for the shiny thing.");
+		passtext("@Your not sure if you can even pick it up without your body.>It doesn't matter though.>|You can't reach.");
+
+		addoption("2");
+		addtext("Approach the cat.");
+		passtext("Cat: meOWW.~The cat is spooked by your movement.>It's almost like he's never seen a disembodied shadow before.>He leaps away from you onto the cabinet.>The shiny thing is knocked onto the floor.");
+		action(ATYPE_ENABLE,"LOCkitchen:3");
+		action(ATYPE_DISABLE,"LOCkitchen:1");
+		single_use();
+
+		addoption("3");
+		addtext("Pick up the shiny thing.");
+		passtext("You are strangely drawn to the glowing red crystal,\nand as you near it, the glow intensifies.>You get the feeling...>This crystal...>is a part of you.~You reach for it.~It dissolves into your chest.~A portion of your heart has been restored.>You can feel the light in you veins.~!Achievement Unlocked: [you can now enter dark places]");
+		action(ATYPE_ITEM, "HF1");
+		disable();
+		single_use();
+
+		addoption("4");
+		addtext("Return to livingroom.");
+		passtext("[Continue]");
+		action(ATYPE_MOVE, "LOCmainroom");
+
+	newroom("LOCbasement",2);
+	addtext("[Continue]~This is all I had time to program.>Most work went toward the engine.>You can now skip to the end or go back to the beginning.>I hope you enjoyed this demo.~|@You are in the basement.");
+		addoption("1");
+		addtext("Skip to end.");
+		passtext("[Continue]");
+		action(ATYPE_ITEM, "HF2");
+		action(ATYPE_ITEM, "HF3");
+		action(ATYPE_ITEM, "HF4");
+		action(ATYPE_ITEM, "HF5");
+
+
+		addoption("2");
+		addtext("Return upstairs.");
+		passtext("[Continue]");
+		action(ATYPE_MOVE, "LOCmainroom");
 
 	//set entry point
 	data.current = "GMentry0";
