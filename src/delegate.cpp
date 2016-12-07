@@ -452,6 +452,7 @@ int loop(bool fast){
 		clevertext(choosen->failText,choosen->failed);
 		(choosen->failed)++;
 		wait();
+		clear();
 		return true;
 	}
 
@@ -693,7 +694,7 @@ void loadAllData(){
 	data.rooms = new Room[ROOMCOUNT];
 
 	newroom("GMentry0",3);
-	addtext("[Press Enter To Progress]~You get a funny feeling.>Something isn't right.~...~You come to a realization.>Where is your body??~[CONTINUE]~|You materialize in the living room.");
+	addtext("[Press Enter To Progress]~You get a funny feeling.>Something isn't right.~...~You come to a realization.>Where is your body??~![CONTINUE]~|@You materialize in the living room.");
 	addoption("1");
 		addtext("Talk to the child.");
 		passtext("@Child: Hey Ghost Person...~!You approach the child.");
@@ -710,7 +711,7 @@ void loadAllData(){
 		action(ATYPE_ENABLE, "GMentry0:1");
 
 	newroom("GMentry1",3);
-	addtext("Child: Hey>Child: You're not a ghost.>Child: (Just another dumb shadow)>Child: I never find any ghosts.\nThis place is supposed to be haunted\nbut it always turns out to be shadows.~Child: You seem confused>Child: Sorry, I didn't mean to be rude\nMy Name is Toby.>|Child: What's your name.");
+	addtext("Child: Hey>Child: You're not a ghost.>Child: (Just another dumb shadow)>Child: I never find any ghosts.\nThis place is supposed to be haunted\nbut it always turns out to be shadows.~Child: You seem confused>Child: Sorry, I didn't mean to be rude\nMy Name is Toby.~|Child: What's your name.");
 		addoption("1");
 		addtext("Itysbitta");
 		passtext("You: fasdfgkjabfdgmdasfjhg~");
@@ -731,7 +732,7 @@ void loadAllData(){
 
 		addoption("2");
 		addtext("Go to the kitchen.");
-		passtext("[Continue]");
+		passtext("![Continue]");
 		action(ATYPE_MOVE, "LOCkitchen");
 
 		addoption("3");
@@ -739,7 +740,7 @@ void loadAllData(){
 		passtext("Toby: The basement is dark and scary.>Toby: I'm afraid to go down there.>Toby: I BET THERES A GHOST DOWN THERE TOO%!%!%!>You: %<nod%>>|Toby: If only we had a light.");
 
 	newroom("LOCkitchen",4);
-	addtext("The kitchen is a mess.>Its unlikely anyone has lived here in a long time.>There is a black cat looking at you curiously.>There is something shiny on top of the cabinets~[Continue]~|You are in the kitchen.");
+	addtext("The kitchen is a mess.>Its unlikely anyone has lived here in a long time.>There is a black cat looking at you curiously.>There is something shiny on top of the cabinets~![Continue]~|@You are in the kitchen.");
 		addoption("1");
 		addtext("Reach for the shiny thing.");
 		passtext("@Your not sure if you can even pick it up without your body.>It doesn't matter though.>|You can't reach.");
@@ -760,14 +761,14 @@ void loadAllData(){
 
 		addoption("4");
 		addtext("Return to livingroom.");
-		passtext("[Continue]");
+		passtext("![Continue]");
 		action(ATYPE_MOVE, "LOCmainroom");
 
 	newroom("LOCbasement",2);
 	addtext("[Continue]~This is all I had time to program.>Most work went toward the engine.>You can now skip to the end or go back to the beginning.>I hope you enjoyed this demo.~|@You are in the basement.");
 		addoption("1");
 		addtext("Skip to end.");
-		passtext("[Continue]");
+		passtext("![Continue]");
 		action(ATYPE_ITEM, "HF2");
 		action(ATYPE_ITEM, "HF3");
 		action(ATYPE_ITEM, "HF4");
@@ -776,7 +777,7 @@ void loadAllData(){
 
 		addoption("2");
 		addtext("Return upstairs.");
-		passtext("[Continue]");
+		passtext("![Continue]");
 		action(ATYPE_MOVE, "LOCmainroom");
 
 	//set entry point
